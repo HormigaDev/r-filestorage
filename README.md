@@ -1,19 +1,34 @@
 # Rust File Storage gRPC Service
 
-## Descripción
+## Summary
 
-Este servicio implementa una API gRPC en Rust para almacenamiento seguro de archivos. Los archivos se segmentan por `user_id`. Los archivos ejecutables se neutralizan mediante compresión GZIP, mientras que los archivos de texto se almacenan en su formato plano.
+-   [Documentación en Español](./docs/README-ES.md)
+-   [Informativo de seguridad en Español](./docs/SECURITY-ES.md)
 
-## Arquitectura
+---
+
+-   [Documentação em Português](./docs/README-PT.md)
+-   [Informativo de segurança em Português](./docs/SECURITY-PT.md)
+
+## Description
+
+gRPC service in Rust for secure storage of files segmented by `user_id`. Executable files are neutralized using GZIP compression, while non-executable files are stored in their original format.
+
+## Architecture
 
 -   **gRPC Service:** `StorageService`
--   **Endpoint:** `SaveFile`
--   **Funcionalidad:**
-    -   Guarda archivos.
-    -   Detecta archivos ejecutables y los neutraliza (`.neutralized.gz`).
-    -   Archivos de texto se almacenan como texto plano.
+-   **Endpoints:**
+-   `SaveFile`
+-   `GetFile`
+-   `DeleteFile`
+-   **Functionality:**
+-   Save files.
+-   Retrieve files.
+-   Delete files.
+-   Executable files are neutralized using compression (`.neutralized.gz`).
+-   Non-executable files are stored in their original format.
 
-## Estructura del Proyecto
+## Project Structure
 
 ```
 .
@@ -22,27 +37,33 @@ Este servicio implementa una API gRPC en Rust para almacenamiento seguro de arch
 │   └── storage.proto
 ├── src/
 │   ├── generated/
-│   │   └── storage.rs (autogenerado)
+│   │   └── storage.rs (auto-generated)
 │   ├── main.rs
 │   └── storage.rs
 └── Cargo.toml
 ```
 
-> El directorio `src/generated` se genera automáticamente y debe incluirse en el repositorio.
+> The `src/generated` directory is generated automatically and should not be included in the repository.
 
-## Protocolo gRPC
+## gRPC Protocol
 
-Archivo: `proto/storage.proto`
+### File: `proto/storage.proto`
 
--   **Servicio:** `StorageService`
--   **Método:** `SaveFile`
+### Service: `StorageService`
+
+### Methods:
+
+---
+
+### ✅ SaveFile
+
 -   **Request:**
 
 ```proto
 message SaveFileRequest {
-  string user_id = 1;
-  string filename = 2;
-  bytes file_content = 3;
+string user_id = 1;
+string filename = 2;
+bytes file_content = 3;
 }
 ```
 
@@ -50,50 +71,129 @@ message SaveFileRequest {
 
 ```proto
 message SaveFileResponse {
-  bool success = 1;
-  string message = 2;
-  string stored_path = 3;
+bool success = 1;
+string message = 2;
+string stored_path = 3;
 }
 ```
 
-## Uso
+-   **Description:** Saves a file for the specified `user_id`. Executable files are neutralized as `.neutralized.gz`. If the file already exists, it is overwritten.
 
-### Compilación
+---
+
+### ✅ GetFile
+
+-   **Request:**
+
+```proto
+message GetFileRequest {
+string user_id = 1;
+string filename = 2;
+}
+```
+
+-   **Response:**
+
+```proto
+message GetFileResponse {
+bool success = 1;
+string message = 2;
+bytes file_content = 3;
+}
+```
+
+-   **Description:** Retrieves a file from the specified `user_id`. If it is a neutralized executable, it is automatically decompressed before sending.
+
+---
+
+### ✅ DeleteFile
+
+-   **Request:**
+
+```proto
+message DeleteFileRequest {
+string user_id = 1;
+string filename = 2;
+}
+```
+
+-   **Response:**
+
+```proto
+message DeleteFileResponse {
+bool success = 1;
+string message = 2;
+}
+```
+
+-   **Description:** Deletes a specific file from the `user_id`. If it is a neutralized executable, the compressed version is also deleted.
+
+## File Handling
+
+-   Executable files (`exe`, `bat`, `sh`, `msi`, `cmd`, `apk`, `bin`, `com`) are:
+-   Compressed with GZIP.
+-   Renamed with the extension `.neutralized.gz`.
+-   Non-executable files:
+-   Stored in their original format.
+-   Save operations overwrite if the file already exists.
+
+## Logging
+
+-   Implemented with `tracing`.
+-   Minimum level: `info`.
+-   Critical errors are logged and responded to as `Status::internal`.
+
+## Usage
+
+### Compilation
 
 ```bash
 cargo build --release
 ```
 
-### Ejecución
+### Execution
 
 ```bash
 cargo run --release
 ```
 
-### Endpoint
+### Endpoints
 
 -   **Host:** `[::1]:50051`
--   **Servicio:** `StorageService`
--   **Método:** `SaveFile`
+-   **Service:** `StorageService`
 
-## Manejo de Archivos
+### Examples with grpcurl
 
--   Archivos ejecutables (`exe`, `bat`, `sh`, `msi`, `cmd`, `apk`, `bin`, `com`) son:
+#### ✔️ Save file
 
-    -   Comprimidos con GZIP.
-    -   Renombrados con la extensión `.neutralized.gz`.
+```bash
+grpcurl -plaintext -proto proto/storage.proto \
+  -d '{"user_id": "123", "filename":"file.txt", "file_content":"aGVsbG8gd29ybGQ="}' \
+  [::1]:50051 storage.StorageService/SaveFile
+```
 
--   Otros archivos son almacenados en su formato original.
+#### ✔️ Get file
 
-## Logging
+```bash
+grpcurl -plaintext -proto proto/storage.proto \
+  -d '{"user_id": "123", "filename":"file.txt"}' \
+  [::1]:50051 storage.StorageService/GetFile
+```
 
-Se utiliza `tracing` con filtro `info`. Los errores se muestran en consola y son retornados al cliente como `Status::internal` en caso de fallo.
+#### ✔️ Delete file
 
-## Licencia
+```bash
+grpcurl -plaintext -proto proto/storage.proto \
+  -d '{"user_id": "123", "filename":"file.txt"}' \
+  [::1]:50051 storage.StorageService/DeleteFile
+```
 
-Licencia personalizada (CUSTOM).
+## License
+
+This project is licensed under the **MIT License**.  
+See the [LICENSE](./LICENSE) file for more details.
 
 ---
 
-**Autor:** HormigaDev
+**Author:** HormigaDev  
 **Email:** hormigadev7@gmail.com
