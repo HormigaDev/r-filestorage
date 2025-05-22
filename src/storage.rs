@@ -205,5 +205,10 @@ fn internal<E: std::fmt::Debug>(e: E) -> Status {
 }
 
 fn get_storage_dir() -> String {
-    env::var("STORAGE_DIR").unwrap_or_else(|_| "./storage".to_string())
+    let dir = env::var("STORAGE_DIR").unwrap_or_default();
+    if dir.trim().is_empty() {
+        String::from("./storage")
+    } else {
+        dir
+    }
 }
